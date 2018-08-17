@@ -671,26 +671,23 @@ bool BwiLogicalNavigator::openDoor(const std::string& door_name,std::vector<Plan
 std::string& error_message) {
     bool door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
     PlannerAtom open;
-    ros::NodeHandle n;
-    ros::ServiceClient doorClient;
 
-    bwi_msgs::DoorHandlerInterface dhi;
     if (!door_open){
       int respond;
       std::cout << "can you open the door " << door_name << " for me please?(Y/n)";
       std::cin >> respond;
-      if (respond)
-      {
 
-        doorClient = n.serviceClient<bwi_msgs::DoorHandlerInterface> ("/update_doors");
-        doorClient.waitForExistence();
-        dhi.request.all_doors = false;
-        dhi.request.door = door_name;
-        dhi.request.open = true;
+      ros::NodeHandle n;
+      ros::ServiceClient update_doors = n.serviceClient<bwi_msgs::DoorHandlerInterface>("update_doors");
 
-        doorClient.call(dhi);
-        doorClient.waitForResult()
-      }
+      bwi_msgs::DoorHandlerInterface open_all_doors;
+      open_all_doors.request.all_doors = false;
+      open_all_doors.request.open = true;
+      open_all_doors.request.door = door_name;
+
+      update_doors.call(open_all_doors);
+
+
     }
 
     door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
