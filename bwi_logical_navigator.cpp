@@ -92,6 +92,8 @@ class BwiLogicalNavigator : public bwi_logical_translator::BwiLogicalTranslator 
     bool openDoor(const std::string& door_name,
             std::vector<PlannerAtom>& observations,
             std::string& error_message);
+    bool closeAllDoors(std::vector<PlannerAtom>& observations,
+            std::string& error_message);
 
     bool approachObject(const std::string& object_name,
         std::vector<PlannerAtom>& observations,
@@ -667,15 +669,33 @@ bool BwiLogicalNavigator::senseDoor(const std::string& door_name,
   return true;
 }
 
+bool BwiLogicalNavigator::closeAllDoors(std::vector<PlannerAtom>& observations,
+std::string& error_message) {
+//    bool door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
+    ros::NodeHandle n;
+    ros::ServiceClient update_doors = n.serviceClient<bwi_msgs::DoorHandlerInterface>("update_doors");
+
+    bwi_msgs::DoorHandlerInterface close_all_doors;
+    close_all_doors.request.all_doors = true;
+    close_all_doors.request.open = false;
+
+    update_doors.call(close_all_doors);
+    return true;
+
+}
+
 bool BwiLogicalNavigator::openDoor(const std::string& door_name,std::vector<PlannerAtom>& observations,
 std::string& error_message) {
     bool door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
     PlannerAtom open;
+//    bool door_open = false;
 
     if (!door_open){
-      int respond;
+      std::string inputString;
       std::cout << "can you open the door " << door_name << " for me please?(Y/n)";
-      std::cin >> respond;
+      std::cin.clear();
+      std::cin.ignore(INT_MAX,'\n');
+      std::getline(std::cin, inputString);
 
       ros::NodeHandle n;
       ros::ServiceClient update_doors = n.serviceClient<bwi_msgs::DoorHandlerInterface>("update_doors");
@@ -692,12 +712,12 @@ std::string& error_message) {
 
     door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
 
-    open.name = "open";
+  /*  open.name = "open";
     if (!door_open) {
       open.name = "-" + open.name;
     }
     open.value.push_back(door_name);
-    observations.push_back(open);
+    observations.push_back(open);*/
 
   if (door_open) {
     std::cout<<"Thanks!";
@@ -722,6 +742,8 @@ void BwiLogicalNavigator::execute(const bwi_msgs::LogicalActionGoalConstPtr& goa
   } else if (goal->command.name == "opendoor") {
     res.success = openDoor(goal->command.value[0], res.observations,
             res.status);
+  } else if (goal->command.name == "closealldoors") {
+    res.success = closeAllDoors(res.observations,res.status);
   } else if (goal->command.name == "goto") {
     res.success = approachObject(goal->command.value[0], res.observations,
         res.status);
