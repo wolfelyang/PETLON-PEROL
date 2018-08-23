@@ -63,7 +63,7 @@ def executeLogicalAction(actionname,actionparameter):
         result = client.get_result()
         end = time.time()
         elapsedtime = end-start
-        reward = elapsedtime * (-0.1)
+        reward = elapsedtime * (-0.5)
         if result.success:
             print "Success!"
         else:
@@ -237,7 +237,7 @@ if __name__=='__main__':
 #    q_table_lp = {}
 
     runs = 1 # multiple runs
-    episodes = 1
+    episodes = 3
     reward_epi = np.zeros((runs, episodes))
 
     # multiple runs
@@ -309,8 +309,9 @@ if __name__=='__main__':
                 state = state_next
 
             print "Plan execution finished. Go back to initial state"
-            gotoInitialState()
+            executeLogicalAction("teleport","")
             executeLogicalAction("closealldoors","")
+
             #    total_reward += reward
             # R learning
             #    env.render()

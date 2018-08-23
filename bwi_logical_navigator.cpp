@@ -51,6 +51,7 @@
 #include <multi_level_map_utils/utils.h>
 #include <map_msgs/OccupancyGridUpdate.h>
 #include <nav_msgs/Odometry.h>
+#include <std_srvs/Empty.h>
 #include <ros/ros.h>
 #include <tf/message_filter.h>
 #include <tf/transform_datatypes.h>
@@ -60,6 +61,7 @@
 #include <bwi_msgs/LogicalActionAction.h>
 #include <bwi_msgs/DoorHandlerInterface.h>
 #include <bwi_msgs/UpdateObject.h>
+#include <bwi_msgs/RobotTeleporterInterface.h>
 #include <bwi_logical_translator/bwi_logical_translator.h>
 
 using bwi_planning_common::PlannerAtom;
@@ -93,6 +95,9 @@ class BwiLogicalNavigator : public bwi_logical_translator::BwiLogicalTranslator 
             std::vector<PlannerAtom>& observations,
             std::string& error_message);
     bool closeAllDoors(std::vector<PlannerAtom>& observations,
+            std::string& error_message);
+
+    bool teleport(std::vector<PlannerAtom>& observations,
             std::string& error_message);
 
     bool approachObject(const std::string& object_name,
@@ -684,6 +689,38 @@ std::string& error_message) {
 
 }
 
+bool BwiLogicalNavigator::teleport(std::vector<PlannerAtom>& observations,
+std::string& error_message)
+{
+  ros::NodeHandle n;
+  ros::ServiceClient robot_teleporter_client =
+    n.serviceClient<bwi_msgs::RobotTeleporterInterface>("teleport_robot");
+  robot_teleporter_client.waitForExistence();
+
+  bwi_msgs::RobotTeleporterInterface rti;
+
+
+  rti.request.pose.position.x = 15;
+  rti.request.pose.position.y = 110;
+
+  if (robot_teleporter_client.call(rti) && rti.response.success) {
+
+    ros::ServiceClient forget_everything = n.serviceClient<std_srvs::Empty>("reset_state");
+    std_srvs::Empty nothingness;
+    forget_everything.call(nothingness);
+
+    return true;
+  } else {
+    ROS_ERROR_STREAM("Failed robot teleportation to pose " << rti.request.pose);
+
+    ros::ServiceClient forget_everything = n.serviceClient<std_srvs::Empty>("reset_state");
+    std_srvs::Empty nothingness;
+    forget_everything.call(nothingness);
+
+    return false;
+  }
+}
+
 bool BwiLogicalNavigator::openDoor(const std::string& door_name,std::vector<PlannerAtom>& observations,
 std::string& error_message) {
     bool door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
@@ -744,6 +781,8 @@ void BwiLogicalNavigator::execute(const bwi_msgs::LogicalActionGoalConstPtr& goa
             res.status);
   } else if (goal->command.name == "closealldoors") {
     res.success = closeAllDoors(res.observations,res.status);
+  } else if (goal->command.name == "teleport") {
+    res.success = teleport(res.observations,res.status);
   } else if (goal->command.name == "goto") {
     res.success = approachObject(goal->command.value[0], res.observations,
         res.status);
