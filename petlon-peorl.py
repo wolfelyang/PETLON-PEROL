@@ -69,6 +69,8 @@ def executeLogicalAction(actionname,actionparameter):
         else:
             print "Failed because " + result.status
         for obs in result.observations:
+            if obs.name[0] == '-':
+                continue
             print obs.name,
             if len(obs.value) > 0:
                 print "(" + ",".join(obs.value) + ")"
@@ -109,54 +111,13 @@ def gotoInitialState():
     print "Robot initial state restored."
 
 
-def getActionName(i):
-    if i == 1:
-        return "move(n)"
-    if i == 0:
-        return "move(s)"
-    if i == 2:
-        return "move(e)"
-    if i == 3:
-        return "move(w)"
-    if i == 4:
-        return "pickup(g)"
-    if i == 5:
-        return "dropoff(g)"
-
-def generate_initial_state(env):
-    inputfile = open("initial.lp","w")
-#    env.render()
-    taxirow, taxicol, passidx, destidx = env.decode(env.s)
-#    print "taxi=",(taxirow,taxicol),"guestloc=",env.locs[passidx],"destloc=",env.locs[destidx]
-    inputfile.write("taxiloc("+str(taxirow)+","+str(taxicol)+").\n")
-    inputfile.write("guestloc("+str(env.locs[passidx][0])+","+str(env.locs[passidx][1])+").\n")
-    inputfile.write("destloc("+str(env.locs[destidx][0])+","+str(env.locs[destidx][1])+").\n")
-    inputfile.close()
-    return passidx, destidx
-
-def generate_lp_key(env,state,passidx,destidx,action):
-    taxirow, taxicol, _, _ = env.decode(state)
-    guestloc = env.locs[passidx]
-    destloc = env.locs[destidx]
-    actionname = getActionName(action)
-    return (taxirow,taxicol,guestloc[0],guestloc[1],destloc[0],destloc[1],actionname)
-
-def generate_qvalue_lp(q_table_lp):
-#    print "output qvalues"
-    qfile = open("q.lp","w")
-    for key in q_table_lp.keys():
-        qrule = "q(("+str(key[0])+","+str(key[1])+","+str(key[2])+","+str(key[3])+","+str(key[4])+","+str(key[5])+"),"+key[6]+","+str(int(math.floor(q_table_lp[key])))+").\n"
-        qfile.write(qrule)
-    qfile.close()
-
-
 
 def generate_goal_file(planquality):
 #    print "output new goal file"
     goalfile = open("goal.lp","w")
     goalfile.write("#program check(k).\n")
-    goalfile.write(":- not finished(g,k), query(k).\n")
-    goalfile.write(":- &sum{cost(k)} <= "+str(planquality)+",query(k).")
+    goalfile.write(":- not at(l3_414a,k), query(k).\n")
+    goalfile.write(":- C <= "+str(planquality)+",cost(C,k),query(k).")
     goalfile.close()
 
 def restore_goal_file():
@@ -177,7 +138,7 @@ def throwdice(threshold):
     else:
         return False
 
-def calculateplanquality(env,ro_table,stateaction):
+def calculateplanquality(ro_table,stateaction):
     planquality = 0
     for (state,action) in stateaction:
         planquality += int(math.floor(ro_table[state,action]))
@@ -188,29 +149,19 @@ def calculateplanquality(env,ro_table,stateaction):
 #    pause()
     return planquality
 
-def generate_rovalue_from_table(env,q_table_lp,ro_table):
+def generate_rovalue_from_table(q_table_lp,ro_table):
 #    print "output qvalues"
     qt = set(q_table_lp)
     qfile = open("q.lp","w")
     for (state,action) in qt:
-        taxirow,taxicol, passidx, _ = env.decode(state)
-        actionname = getActionName(action)
+        actionname = actionlist[action]
+        symbolicstate = statelist[state]
     #    comment = "% taxi:"+str(taxirow)+","+str(taxicol)+",passenger:"+str(passidx)+"\n"
-        qrule = "q(("+str(taxirow)+","+str(taxicol)+","+str(passidx)+"),"+actionname+","+str(int(math.floor(ro_table[state,action])))+").\n"
+        qrule = "ro(("+','.join(str(e) for e in symbolicstate) +"),"+actionname+","+str(int(math.floor(ro_table[state,action])))+").\n"
+        print qrule
         qfile.write(qrule)
     qfile.close()
 
-def generate_qvalue_from_table(env,q_table_lp,ro_table):
-#    print "output qvalues"
-    qt = set(q_table_lp)
-    qfile = open("other.lp","w")
-    for (state,action) in qt:
-        taxirow,taxicol, passidx, _ = env.decode(state)
-        actionname = getActionName(action)
-    #    comment = "% taxi:"+str(taxirow)+","+str(taxicol)+",passenger:"+str(passidx)+"\n"
-        qrule = "q(("+str(taxirow)+","+str(taxicol)+","+str(passidx)+"),"+actionname+","+str(ro_table[state,action])+").\n"
-        qfile.write(qrule)
-    qfile.close()
 
 
 if __name__=='__main__':
@@ -232,12 +183,8 @@ if __name__=='__main__':
     EPSILON = 0.01
     BETA = 0.3
 
-    # Q and rewards
-#    q_table = np.zeros((nS, nA))
-#    q_table_lp = {}
-
     runs = 1 # multiple runs
-    episodes = 3
+    episodes = 10
     reward_epi = np.zeros((runs, episodes))
 
     # multiple runs
@@ -248,10 +195,9 @@ if __name__=='__main__':
         actionlist = []
         q_table_lp = []
 
-        state_factorized = ("initial",)
+        state_factorized = ["at(l3_410)"]
         state = encode_state(state_factorized)
 
-        other_trained_data = {}
     #    restore_goal_file()
         converged = False
     # Episodes
@@ -259,18 +205,12 @@ if __name__=='__main__':
         plantrace = []
         for episode in xrange(episodes):
             # Refresh state
-
+            executeLogicalAction("teleport","")
             stateaction = []
-            rewardpicked = False
             if episode % 50 == 0:
                 print "Run",run,",Episode",episode
             planquality = 0
-        #    env.s = env.encode(taxirow,taxicol,passidx,destidx)
-        #    state = env.s
-        #    passidx, destidx = generate_initial_state(env)
-         #   generate_qvalue_lp(env,q_table_lp)
-        #    generate_rovalue_from_table(env,q_table_lp,q_table)
-        #    generate_qvalue_from_table(env,q_table_lp,true_q_table)
+            generate_rovalue_from_table(q_table_lp,q_table)
             if explore:
                 print "generate new plan..."
                 oldplan = plantrace
@@ -289,68 +229,51 @@ if __name__=='__main__':
 
             # Run episode
             for i in xrange(len(plantrace)-1):
+                print statelist
+                print actionlist
+                terminate = False
                 logicalaction,actionname,actionparameter = getLogicalAction(plantrace,i)
+                action = encode_action(logicalaction)
                 if logicalaction != None:
                     result, state_next, reward = executeLogicalAction(actionname,actionparameter)
-                    print "next state", state_next
-                    print "reward",reward
-            #        stateaction.append((state,action))
+                    if not result.success:
+                        reward = -100
+                        terminate = True
+                    else:
+                        print "next state", state_next
+                        print "reward",reward
+                        stateaction.append((state,action))
                 #    state_next, reward, done, info = env.step(action)
                 #    taxirow,taxicol,passidx,destidx = env.decode(state_next)
                 elif logicalaction == None:
                     print "action not found",action,i
 
-                action = encode_action(logicalaction)
-
                 q_table[state, action] += 0.1 * (reward - ro_table[state,action] + max(q_table[state_next, :]) - q_table[state, action])
                 ro_table[state, action] += 0.5 * (reward + max(q_table[state_next, :]) - max(q_table[state, :])- ro_table[state,action])
                 print "q value:", q_table[state, action]
                 print "ro value", ro_table[state, action]
+                if terminate:
+                    print "execution failure occured, need to restart"
+                    break
+
+
+                if (state,action) not in q_table_lp:
+                    q_table_lp.append((state,action))
+
                 state = state_next
+                total_reward += reward
 
             print "Plan execution finished. Go back to initial state"
             executeLogicalAction("teleport","")
             executeLogicalAction("closealldoors","")
 
-            #    total_reward += reward
-            # R learning
-            #    env.render()
-            #    print taxirow,taxicol,passidx,destidx
-            #    pause()
-            #    true_q_table[state, action] += LEARNING_RATE_Q * (reward + DISCOUNT * max(true_q_table[state_next, :]) - q_table[state, action])
-
-            #    q_table[state, action] += 0.1 * (reward - ro_table[state,action] + max(q_table[state_next, :]) - q_table[state, action])
-            #    ro_table[state, action] += 0.5 * (reward + max(q_table[state_next, :]) - max(q_table[state, :])- ro_table[state,action])
-
-            # Q learning
-            #    q_table[state, action] += LEARNING_RATE_Q * (reward + DISCOUNT * max(q_table[state_next, :]) - q_table[state, action])
-            #    ro_table[state, action] += LEARNING_RATE_R * (reward + max(q_table[state_next, :]) - max(q_table[state, :])- ro_table[state,action])
-
-            #    if (state,action) not in q_table_lp:
-        #            q_table_lp.append((state,action))
-    #            r,c,_,_ = env.decode(state)
-            #    an = getActionName(action)
-
-            #    planquality += int(math.floor(ro_table[state,action]))
-            #    print "pos(",r,c,")",an,ro_table[state,action],int(math.floor(ro_table[state,action])),planquality
-
-            #    print "true_q_table",r,c,an,true_q_table[state,action]
-            #    if done:
-            #        break
-            #    state = state_next
-            # pause()
-
-    #        planquality = calculateplanquality(env,q_table,stateaction)
-    #        reward_epi[run, episode] = total_reward
-    #        print "run",run,"episode",episode,"total reward",total_reward,"plan quality",planquality
-        #    pause()
-        #    eps = min(0.2,1-episode/episodes)
-        #    explore = True
-        #    eps = max(0.2,1.5/total_reward)
-        #    eps = 0.2
-        #    explore = throwdice(eps) and not converged
-        #    if explore:
-        #        generate_goal_file(planquality)
+            planquality = calculateplanquality(q_table,stateaction)
+            reward_epi[run, episode] = total_reward
+            print "run",run,"episode",episode,"total reward",total_reward,"plan quality",planquality
+            eps = 0.2
+            explore = throwdice(eps) and not converged
+            if explore:
+                generate_goal_file(planquality)
 
 
 

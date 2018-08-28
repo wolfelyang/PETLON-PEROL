@@ -693,6 +693,7 @@ bool BwiLogicalNavigator::teleport(std::vector<PlannerAtom>& observations,
 std::string& error_message)
 {
   ros::NodeHandle n;
+
   ros::ServiceClient robot_teleporter_client =
     n.serviceClient<bwi_msgs::RobotTeleporterInterface>("teleport_robot");
   robot_teleporter_client.waitForExistence();
@@ -709,6 +710,35 @@ std::string& error_message)
     std_srvs::Empty nothingness;
     forget_everything.call(nothingness);
 
+
+
+    ros::Publisher pose_pub =
+      n.advertise<geometry_msgs::PoseWithCovarianceStamped>("initialpose", 100);
+    geometry_msgs::PoseWithCovarianceStamped pose;
+    // pose.header.stamp = ros::Time::now();
+    pose.header.frame_id = "/level_mux_map";
+    pose.pose.pose.position.x = 15.0;
+    pose.pose.pose.position.y = 110.0;
+    pose.pose.pose.orientation.z = 0.0;
+    pose.pose.pose.orientation.w = 1.0;
+    pose.pose.covariance[0] = 0.1;
+    pose.pose.covariance[7] = 0.1f;
+    pose.pose.covariance[35] = 0.25f;
+
+    ROS_INFO("so far so good");
+
+    ros::Duration(0.5).sleep();
+    pose_pub.publish(pose);
+    ros::spinOnce();
+    ros::Duration(0.5).sleep();
+    pose_pub.publish(pose);
+    ros::spinOnce();
+
+    ROS_INFO("so far perfect");
+
+
+
+
     return true;
   } else {
     ROS_ERROR_STREAM("Failed robot teleportation to pose " << rti.request.pose);
@@ -719,11 +749,14 @@ std::string& error_message)
 
     return false;
   }
+
 }
 
 bool BwiLogicalNavigator::openDoor(const std::string& door_name,std::vector<PlannerAtom>& observations,
 std::string& error_message) {
     bool door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
+    size_t door_idx = getDoorIdx(door_name);
+    error_message = "";
     PlannerAtom open;
 //    bool door_open = false;
 
@@ -749,7 +782,7 @@ std::string& error_message) {
 
     door_open = isDoorOpen(bwi_planning_common::resolveDoor(door_name, doors_));
 
-  /*  open.name = "open";
+/*    open.name = "open";
     if (!door_open) {
       open.name = "-" + open.name;
     }
@@ -757,6 +790,7 @@ std::string& error_message) {
     observations.push_back(open);*/
 
   if (door_open) {
+  //  senseState(observations,door_idx);
     std::cout<<"Thanks!";
   }
   return true;
@@ -779,6 +813,8 @@ void BwiLogicalNavigator::execute(const bwi_msgs::LogicalActionGoalConstPtr& goa
   } else if (goal->command.name == "opendoor") {
     res.success = openDoor(goal->command.value[0], res.observations,
             res.status);
+    size_t door_idx = getDoorIdx(goal->command.value[0]);
+    senseState(res.observations,door_idx);
   } else if (goal->command.name == "closealldoors") {
     res.success = closeAllDoors(res.observations,res.status);
   } else if (goal->command.name == "teleport") {

@@ -18,11 +18,14 @@ heuristics(R1,gothrough(D),10) :- hasdoor(R1,D).
 % Actions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%{approach(D,k)} :- at(R1,k), hasdoor(R2,D), acc(R1,R2).
+
 facing(D,k) :- approach(D,k-1).
 beside(D,k) :- approach(D,k-1).
 at(R2,k) :- approach(D,k-1), at(R1,k-1), hasdoor(R2,D), acc(R1,R2).
 :- approach(D,k-1), at(R1,k-1), dooracc(R3,D,R2), not acc(R1,R3), not acc(R1,R2).
 
+%{gothrough(D,k)} :- facing(D,k),open(D,k),beside(D,k).
 at(R2,k) :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2).
 -facing(D,k) :- gothrough(D,k-1), facing(D,k-1).
 :- gothrough(D,k-1), not facing(D,k-1).
@@ -30,6 +33,7 @@ at(R2,k) :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2).
 %cannot go through if the person in office is not available
 :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2), hasoffice(P,R2), not accessgranted(D,k-1).
 
+%{open(D,k)} :- facing(D,k),-open(D,k),beside(D,k).
 open(D,k) :- opendoor(D,k-1).
 facing(D,k) :- opendoor(D,k-1).
 beside(D,k) :- opendoor(D,k-1).
@@ -48,14 +52,17 @@ at(R,k) :- goto(O,k-1), inside(O,R).
 % Change on plan quality
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost(Q+R,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), ro(R1,approach(D),R), R!=0.
+cost(Q+R,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), ro(at(R1),approach(D),R).
 % if there is learned value, use it
 
-cost(Q+R,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), not ro(R1,approach(D),R), heuristics(R1,approach(D),R), R!=0.
+cost(Q+10,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), #count{R:ro(at(R1),approach(D),R)}=0.
 % if there is no learned value, use heuristics obtained from navigation
 
-cost(Q+R,k) :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2), cost(Q,k-1), ro(R1,gothrough(D),R), R!=0.
-cost(Q+R,k) :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2), cost(Q,k-1), not ro(R1,gothrough(D),R), heuristics(R1,gothrough(D),R), R!=0.
+cost(Q+R,k) :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2), cost(Q,k-1), ro((at(R1),beside(D),facing(D)),gothrough(D),R).
+cost(Q+10,k) :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2), cost(Q,k-1), #count{R:ro((at(R1),beside(D),facing(D)),gothrough(D),R)}=0.
+
+cost(Q+R,k) :- opendoor(D,k-1), at(R1,k-1), dooracc(R1,D,R2), cost(Q,k-1), ro((at(R1),beside(D),facing(D)),opendoor(D),R).
+cost(Q+10,k) :- opendoor(D,k-1), at(R1,k-1), dooracc(R1,D,R2), cost(Q,k-1), #count{R:ro((at(R1),beside(D),facing(D)),opendoor(D),R)}=0.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,3 +106,14 @@ beside(D,k) :- beside(D,k-1), not -beside(D,k).
 #show -open/2.
 #show facing/2.
 #show beside/2.
+
+#show approach/2.
+#show gothrough/2.
+#show opendoor/2.
+#show goto/2.
+#show callelevator/3.
+#show changefloor/2.
+#show knock/2.
+#show searchperson/4.
+#show delivermessage/3.
+#show cost/2.
