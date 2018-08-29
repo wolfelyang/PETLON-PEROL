@@ -765,18 +765,21 @@ std::string& error_message) {
       std::cout << "can you open the door " << door_name << " for me please?(Y/n)";
       std::cin.clear();
       std::cin.ignore(INT_MAX,'\n');
+      ros::spinOnce();
       std::getline(std::cin, inputString);
 
-      ros::NodeHandle n;
-      ros::ServiceClient update_doors = n.serviceClient<bwi_msgs::DoorHandlerInterface>("update_doors");
+      if (!inputString.compare("Y"))
+      {
+        ros::NodeHandle n;
+        ros::ServiceClient update_doors = n.serviceClient<bwi_msgs::DoorHandlerInterface>("update_doors");
 
-      bwi_msgs::DoorHandlerInterface open_all_doors;
-      open_all_doors.request.all_doors = false;
-      open_all_doors.request.open = true;
-      open_all_doors.request.door = door_name;
+        bwi_msgs::DoorHandlerInterface open_all_doors;
+        open_all_doors.request.all_doors = false;
+        open_all_doors.request.open = true;
+        open_all_doors.request.door = door_name;
 
-      update_doors.call(open_all_doors);
-
+        update_doors.call(open_all_doors);
+      }
 
     }
 
@@ -792,8 +795,13 @@ std::string& error_message) {
   if (door_open) {
   //  senseState(observations,door_idx);
     std::cout<<"Thanks!";
+    return true;
   }
-  return true;
+  else{
+    std::cout<<"Door remains closed.";
+    return false;
+  }
+
 
 }
 
