@@ -52,11 +52,15 @@ at(R,k) :- goto(O,k-1), inside(O,R).
 % Change on plan quality
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cost(Q+R,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), ro(at(R1),approach(D),R), #count{D1:facing(D1)}=0.
+cost(Q+R,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), ro(at(R1),approach(D),R), #count{D1:facing(D1)}=0, #count{D1:beside(D1)}=0.
 cost(Q+R,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), ro((at(R1),facing(D1)),approach(D),R), facing(D1).
+cost(Q+R,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), ro((at(R1),beside(D1)),approach(D),R), beside(D1).
 % if there is learned value, use it
 
-cost(Q+10,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), #count{R:ro((at(R1),facing(D1)),approach(D),R)}=0,#count{R:ro(at(R1),approach(D),R)}=0.
+cost(Q+10,k) :- approach(D,k-1), at(R1,k-1), cost(Q,k-1), #count{R:ro((at(R1),facing(D1)),approach(D),R)}=0,
+                                                          #count{R:ro(at(R1),approach(D),R)}=0,
+                                                          #count{R:ro((at(R1),beside(D1)),approach(D),R)}=0.
+                                                          
 % if there is no learned value, use heuristics obtained from navigation
 
 cost(Q+R,k) :- gothrough(D,k-1), at(R1,k-1), dooracc(R1,D,R2), cost(Q,k-1), ro((at(R1),beside(D),facing(D)),gothrough(D),R).

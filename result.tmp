@@ -6,10 +6,10 @@ Solving...
 Solving...
 Solving...
 Answer: 1
-at(l3_504,0) cost(0,0) at(l3_504,1) cost(0,1) at(l3_500,2) approach(d3_414a2,1) facing(d3_414a2,2) beside(d3_414a2,2) cost(0,2) at(l3_500,3) facing(d3_414a2,3) beside(d3_414a2,3) opendoor(d3_414a2,2) open(d3_414a2,3) cost(0,3) at(l3_414a,4) gothrough(d3_414a2,3) beside(d3_414a2,4) open(d3_414a2,4) cost(10,4)
+at(l3_410,0) cost(0,0) at(l3_410,1) cost(0,1) at(l3_400,2) approach(d3_414a1,1) cost(10,2) facing(d3_414a1,2) beside(d3_414a1,2) at(l3_400,3) cost(9,3) opendoor(d3_414a1,2) facing(d3_414a1,3) beside(d3_414a1,3) open(d3_414a1,3) at(l3_414a,4) gothrough(d3_414a1,3) cost(19,4) beside(d3_414a1,4) open(d3_414a1,4)
 SATISFIABLE
 
 Models       : 1+
 Calls        : 5
-Time         : 0.140s (Solving: 0.01s 1st Model: 0.01s Unsat: 0.00s)
-CPU Time     : 0.139s
+Time         : 0.077s (Solving: 0.01s 1st Model: 0.00s Unsat: 0.00s)
+CPU Time     : 0.068s

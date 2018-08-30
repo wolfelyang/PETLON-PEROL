@@ -45,6 +45,15 @@ def getLogicalAction(plantrace,i):
     actionparameter = action[action.find('(')+1:action.find(')')]
     return action,actionname,actionparameter
 
+def simulate_door_openning_time(doorname):
+    if doorname in ['d3_414a1','d3_414b1']:
+        return random.uniform(1,5)
+    if doorname in ['d3_414a2','d3_414b2']:
+        return random.uniform(5,10)
+    if doorname in ['d3_414a3','d3_414b3']:
+        return random.uniform(10,15)
+    return random.uniform(15,20)
+
 def executeLogicalAction(actionname,actionparameter):
     state_next_factorized = []
     try:
@@ -58,12 +67,18 @@ def executeLogicalAction(actionname,actionparameter):
         goal = bwi_msgs.msg.LogicalActionGoal(atom)
 
         start = time.time()
+        if actionname == "opendoor":
+            waittime = simulate_door_openning_time(actionparameter)
+            print "waiting ",waittime, "seconds for door to be opened..."
+            time.sleep(waittime)
         client.send_goal(goal)
         client.wait_for_result()
         result = client.get_result()
         end = time.time()
         elapsedtime = end-start
-        reward = elapsedtime * (-0.5)
+        print "elapsed time:"
+        reward = elapsedtime * (-2)
+        print "elapsed time",elapsedtime,"reward",reward
         if result.success:
             print "Success!"
         else:
@@ -184,7 +199,7 @@ if __name__=='__main__':
     BETA = 0.3
 
     runs = 1 # multiple runs
-    episodes = 10
+    episodes = 20
     reward_epi = np.zeros((runs, episodes))
 
     # multiple runs
@@ -272,6 +287,7 @@ if __name__=='__main__':
             print "run",run,"episode",episode,"total reward",total_reward,"plan quality",planquality
             eps = 0.2
             explore = throwdice(eps) and not converged
+            explore=True
             if explore:
                 generate_goal_file(planquality)
 
